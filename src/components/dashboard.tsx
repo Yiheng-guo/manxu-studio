@@ -1,4 +1,5 @@
 "use client";
+import { projectHref } from "@/lib/public-mode";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -78,7 +79,7 @@ export function Dashboard() {
               shots: [],
             },
       );
-      router.push(`/project/${p.id}`);
+      router.push(projectHref(p.id));
     } catch (e) {
       setError(messageOf(e));
       setBusy(false);
@@ -278,7 +279,7 @@ export function Dashboard() {
                 <div className="project-grid">
                   {filtered.map((p) => (
                     <article className="project-card" key={p.id}>
-                      <Link href={`/project/${p.id}`} className="project-cover">
+                      <Link href={projectHref(p.id)} className="project-cover">
                         {p.shots.find((s) => s.imageUrl)?.imageUrl ? (
                           <img
                             alt={p.title + "封面"}
@@ -307,7 +308,7 @@ export function Dashboard() {
                       </Link>
                       <div className="project-details">
                         <div>
-                          <Link href={`/project/${p.id}`}>
+                          <Link href={projectHref(p.id)}>
                             <h3>{p.title}</h3>
                           </Link>
                           <button
@@ -333,7 +334,7 @@ export function Dashboard() {
                             更新
                           </span>
                           <Link
-                            href={`/project/${p.id}`}
+                            href={projectHref(p.id)}
                             aria-label={`继续创作 ${p.title}`}
                           >
                             <ArrowUpRight size={16} />

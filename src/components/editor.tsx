@@ -28,6 +28,7 @@ import {
   Clock3,
   LoaderCircle,
 } from "lucide-react";
+import { publicDemo } from "@/lib/public-mode";
 import { api } from "@/lib/api";
 import {
   activeJob,
@@ -921,6 +922,7 @@ export function Editor({ id }: { id: string }) {
                           </details>
                           <button
                             className="button secondary full"
+                            disabled={publicDemo}
                             onClick={() => fileRef.current?.click()}
                           >
                             <Upload size={16} />
@@ -938,7 +940,7 @@ export function Editor({ id }: { id: string }) {
                             }}
                           />
                           <p className="inline-help centered">
-                            PNG / JPG / WebP · 不超过 10 MB
+                            {publicDemo ? "公网版可编辑镜头；图片上传使用完整本机版。" : "PNG / JPG / WebP · 不超过 10 MB"}
                           </p>
                           <div className="inspector-tools">
                             <button

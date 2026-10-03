@@ -1,3 +1,5 @@
+import { publicDemo } from "./public-mode";
+import { publicRequest } from "./public-store";
 import { z } from "zod";
 import {
   projectSchema,
@@ -22,6 +24,7 @@ async function request<T>(
   schema: z.ZodType<T>,
   options?: RequestInit,
 ): Promise<T> {
+  if (publicDemo) return schema.parse(await publicRequest(path, options));
   const res = await fetch("/api" + path, {
     ...options,
     headers: {

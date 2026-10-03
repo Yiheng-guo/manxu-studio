@@ -1,4 +1,5 @@
 "use client";
+import { publicDemo } from "@/lib/public-mode";
 import { useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -136,7 +137,7 @@ export function Shell({
             <div className="avatar">Y</div>
             <div>
               <b>Yiheng 的工作室</b>
-              <small>个人沉淀 · 本机保存</small>
+              <small>个人沉淀 · 设备本地保存</small>
             </div>
             <span className="online-dot" />
           </div>
@@ -159,12 +160,13 @@ export function Shell({
           <div className="topbar-right">
             <span className="local-status">
               <span className="online-dot" />
-              本地工作区
+              {publicDemo ? "公网体验 · 浏览器保存" : "本地工作区"}
             </span>
             {action}
             <div className="avatar small">Y</div>
           </div>
         </header>
+        {publicDemo&&<div className="public-demo-banner">公网体验版 · 个人输入只保存在当前浏览器，清除浏览器数据会丢失；请导出备份。示例成片为预制素材，实时生成和图片上传使用完整本机版。<a href="/tour.html">查看操作演示 →</a></div>}
         <main id="main">{children}</main>
         <footer className="app-footer">
           <span>漫序 FRAMEFLOW</span>

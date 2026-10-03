@@ -3172,3 +3172,5 @@ summary:focus-visible {
 .wb-history summary { color: #92918a; font-size: 11px; cursor: pointer; }
 .wb-history details p { white-space: pre-wrap; overflow-wrap: anywhere; color: #989993; font-size: 11px; margin-top: 12px; line-height: 1.9; max-height: 260px; overflow-y: auto; }
 .wb-history small { display: block; color: #b0a590; margin-top: 12px; font-size: 10px; }
+
+.public-demo-banner{padding:12px 24px;background:#fff2df;color:#694221;font-size:12px;line-height:1.8;border-bottom:1px solid #efd9bb}.public-demo-banner a{font-weight:700;margin-left:12px;text-decoration:underline}
