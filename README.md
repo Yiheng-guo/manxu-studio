@@ -24,6 +24,7 @@ v2 提供完整本机版与公网交互体验版。技术包版本继续沿用�
 
 - [直接体验漫序](https://s6fc4hec1r2qhhkrj949b.apigateway-cn-beijing.volceapi.com/)
 - [六步操作动画：可播放、暂停、逐步浏览](https://s6fc4hec1r2qhhkrj949b.apigateway-cn-beijing.volceapi.com/tour.html)
+- [直接查看 / 下载 GIF 演示](docs/demo-v2/walkthrough.gif)
 - [部署方式与能力边界](docs/PUBLIC_DEPLOYMENT.md)
 
 公网版支持研究、评测、分镜编辑、问题定位、版本与档案导出；输入只保存在访问者当前浏览器。清除浏览器数据会丢失，请导出备份。示例成片为本机真实合成后预置。实时模型调用、图片上传和配音/视频合成使用完整本机版，公网版没有共享数据库或模型凭证。
