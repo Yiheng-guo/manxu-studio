@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-03",
+  "projectId": "7d06bbd3-a68f-4dfb-8861-cf9bb5e6f1e2",
+  "source": "Manxu original demonstration, local macOS voice and FFmpeg synthesis; independent from external breakfast drama",
+  "plannedSeconds": 25,
+  "render": {
+    "videoUrl": "/api/assets/7d06bbd3-a68f-4dfb-8861-cf9bb5e6f1e2/84e15c8e-c941-4948-ae90-76a2063c8d02-film.mp4",
+    "srtUrl": "/api/assets/7d06bbd3-a68f-4dfb-8861-cf9bb5e6f1e2/84e15c8e-c941-4948-ae90-76a2063c8d02-subtitles.srt",
+    "duration": 28.67,
+    "hasAudio": true,
+    "timeline": [
+      {
+        "shotId": "scene-1",
+        "start": 0,
+        "end": 5.67
+      },
+      {
+        "shotId": "scene-2",
+        "start": 5.67,
+        "end": 12.67
+      },
+      {
+        "shotId": "scene-3",
+        "start": 12.67,
+        "end": 20.67
+      },
+      {
+        "shotId": "scene-4",
+        "start": 20.67,
+        "end": 28.67
+      }
+    ],
+    "revision": 3,
+    "createdAt": "2026-10-02T20:26:13.406Z"
+  },
+  "decodeExitCode": 0,
+  "mediaMetadata": [
+    "Duration: 00:00:28.69, start: 0.000000, bitrate: 989 kb/s",
+    "Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p, 1280x720 [SAR 1:1 DAR 16:9], 878 kb/s, 24 fps, 24 tbr, 12288 tbn, 48 tbc (default)",
+    "Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 105 kb/s (default)",
+    "Stream #0:0 -> #0:0 (h264 (native) -> wrapped_avframe (native))",
+    "Stream #0:1 -> #0:1 (aac (native) -> pcm_s16le (native))",
+    "Stream #0:0(und): Video: wrapped_avframe, yuv420p(progressive), 1280x720 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 24 fps, 24 tbn (default)",
+    "Stream #0:1(und): Audio: pcm_s16le, 44100 Hz, stereo, s16, 1411 kb/s (default)",
+    "frame=    1 fps=0.0 q=-0.0 size=N/A time=00:00:00.41 bitrate=N/A speed=32.5x",
+    "frame=  688 fps=0.0 q=-0.0 Lsize=N/A time=00:00:28.70 bitrate=N/A speed= 137x"
+  ],
+  "subtitles": "1\n00:00:00,000 --> 00:00:05,670\n毕业那晚，我捡到一张奇怪的车票。终点站，叫作明天。\n\n2\n00:00:05,670 --> 00:00:12,670\n车窗里的人忽然笑了。她说，别怕，我就是十年后的你。\n\n3\n00:00:12,670 --> 00:00:20,670\n我问她，后来一切都好吗？她把怀表递给我：你会找到自己的时间。\n\n4\n00:00:20,670 --> 00:00:28,670\n天亮时，车票变成了一只鸟。我没有得到答案，却终于愿意出发。\n",
+  "sha256": "fab1b603ddb8b62c5f56c06f7808c85b49cd4845e198b1d444ce13fb0083a075",
+  "scope": "Technical decode and timing verification only; no claimed human audiovisual quality acceptance"
+}

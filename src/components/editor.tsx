@@ -265,7 +265,7 @@ export function Editor({ id }: { id: string }) {
     <Shell
       crumb={project?.title || "漫剧编辑器"}
       action={
-        <Link href="/" className="topbar-link">
+        <Link href="/?view=studio" className="topbar-link">
           <ArrowLeft size={14} />
           返回作品
         </Link>
@@ -341,6 +341,14 @@ export function Editor({ id }: { id: string }) {
                   <Film size={16} />
                   导出成片
                 </button>
+              </div>
+            </div>
+            <div className="project-practice-bar">
+              <span>把当前作品纳入实践记录：{dirty ? "请先保存修改，再记录审阅或问题。" : "先确认、再制作；局部修订后复查相邻镜头与全片。"}</span>
+              <div>
+                <Link href={`/?view=research&project=${project.id}`}>研究依据</Link>
+                <Link href={`/?view=evaluation&project=${project.id}`}>评测记录</Link>
+                <Link href={`/?view=quality&project=${project.id}`}>审阅与复测</Link>
               </div>
             </div>
             <div className="editor-tabs" role="tablist" aria-label="创作阶段">
@@ -886,6 +894,13 @@ export function Editor({ id }: { id: string }) {
                               }
                             />
                           </label>
+                          <details className="prompt-details continuity-details">
+                            <summary>角色、道具与连续性镜头卡</summary>
+                            <p>先确认人物和道具的起止状态，再制作画面。填写的准确台词用于审阅；配音仍使用上方旁白 / 台词。</p>
+                            {([{key:"characters",label:"本镜角色",max:600},{key:"props",label:"本镜道具",max:600},{key:"entryState",label:"镜头起始状态",max:1000},{key:"exitState",label:"镜头结束状态",max:1000},{key:"dialogue",label:"准确台词（审阅用）",max:600}] as const).map(f=><label key={f.key}>{f.label}<textarea rows={2} maxLength={f.max} value={shot.continuity?.[f.key] || ""} onChange={e=>editShot({continuity:{characters:"",props:"",entryState:"",exitState:"",dialogue:"",...shot.continuity,[f.key]:e.target.value}})}/></label>)}
+                            <p>上一镜结束：{project.shots[selected-1]?.continuity?.exitState || "尚无记录"}</p>
+                            <p>下一镜起始：{project.shots[selected+1]?.continuity?.entryState || "尚无记录"}</p>
+                          </details>
                           <details className="prompt-details">
                             <summary>
                               <Sparkles size={14} />

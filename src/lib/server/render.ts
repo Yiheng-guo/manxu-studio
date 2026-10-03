@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { type Project, srtTime } from "../schema";
 import { assetPath, ffmpegPath, synthesize } from "./providers";
 import { runProcess } from "./process";
+import { encodedDuration } from "../timeline";
 const escapeXml = (s: string) =>
   s.replace(
     /[<>&"']/g,
@@ -40,6 +41,7 @@ export async function renderMovie(
     h = landscape ? 720 : 1280;
   const segments: string[] = [];
   const subtitles: string[] = [];
+  const timeline: { shotId: string; start: number; end: number }[] = [];
   let total = 0;
   let audioCount = 0;
   for (let i = 0; i < project.shots.length; i++) {
@@ -138,6 +140,11 @@ export async function renderMovie(
       segment,
     ];
     await runProcess(ffmpegPath, args, { signal, timeout: 180000 });
+    // Read the encoded segment, including voice-driven extension and frame rounding.
+    // Legacy projects without this manifest must not use planned timing as actual timing.
+    const encoded = await runProcess(ffmpegPath, ["-hide_banner", "-i", segment, "-t", "0", "-f", "null", "-"], { signal });
+    duration = encodedDuration(encoded.stderr);
+    timeline.push({ shotId: shot.id, start: total, end: total + duration });
     segments.push(segment);
     if (shot.narration.trim())
       subtitles.push(
@@ -189,6 +196,7 @@ export async function renderMovie(
     srtUrl: `/api/assets/${project.id}/${srtName}`,
     duration: total,
     hasAudio: audioCount > 0,
+    timeline,
     revision: project.revision,
     createdAt: new Date().toISOString(),
   };

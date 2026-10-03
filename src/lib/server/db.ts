@@ -1,12 +1,16 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
+  workRecordInputSchema,
+  workRecordSchema,
   type Project,
   type ProjectInput,
   type Job,
   type JobKind,
+  type WorkRecord,
+  type WorkRecordInput,
 } from "../schema";
 export const dataDir = path.resolve(
   /* turbopackIgnore: true */ process.env.DATA_DIR || "./data",
@@ -17,6 +21,8 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
 CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,kind TEXT NOT NULL,status TEXT NOT NULL,progress INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL,error TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,payload TEXT NOT NULL,idempotency TEXT NOT NULL UNIQUE);
 CREATE UNIQUE INDEX IF NOT EXISTS one_active_job ON jobs(project_id) WHERE status IN ('queued','running');
+CREATE TABLE IF NOT EXISTS work_records(id TEXT PRIMARY KEY,data TEXT NOT NULL,create_input TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS work_record_versions(record_id TEXT NOT NULL,revision INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(record_id,revision));
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);`);
 export class AppError extends Error {
   constructor(
@@ -104,6 +110,19 @@ export function deleteProject(id: string) {
       throw new AppError(409, "PROJECT_BUSY", "请先取消正在执行的任务");
     db.prepare("DELETE FROM projects WHERE id=?").run(id);
     db.prepare("DELETE FROM jobs WHERE project_id=?").run(id);
+    for (const row of workRecordRows()) {
+      const record = workRecordSchema.parse(JSON.parse(row.data));
+      if (record.projectId !== id) continue;
+      writeWorkRecordVersion(record);
+      record.projectId = null;
+      record.projectRevision = null;
+      record.projectFingerprint = null;
+      record.stale = false;
+      record.revision += 1;
+      record.updatedAt = new Date().toISOString();
+      writeWorkRecord(record);
+      writeWorkRecordVersion(record);
+    }
     db.exec("COMMIT");
   } catch (e) {
     db.exec("ROLLBACK");
@@ -297,4 +316,230 @@ export function workerReady() {
     .prepare("SELECT value FROM meta WHERE key='heartbeat'")
     .get() as { value: string } | undefined;
   return !!row && Date.now() - Number(row.value) < 12000;
+}
+
+type WorkRecordRow = { id: string; data: string; create_input: string };
+function workRecordRows() {
+  return db
+    .prepare(
+      "SELECT * FROM work_records ORDER BY json_extract(data,'$.updatedAt') DESC,rowid DESC",
+    )
+    .all() as WorkRecordRow[];
+}
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function legacyProjectFingerprint(project: Project): string {
+  const { title, idea, style, ratio, characters, shots } = project;
+  return createHash("sha256")
+    .update(canonicalJson({ title, idea, style, ratio, characters, shots }))
+    .digest("hex");
+}
+export function projectFingerprint(project: Project): string {
+  const { title, idea, style, ratio, characters } = project;
+  const shots = project.shots.map((shot) => ({
+    ...shot,
+    continuity: shot.continuity ?? null,
+  }));
+  return createHash("sha256")
+    .update(canonicalJson({ title, idea, style, ratio, characters, shots }))
+    .digest("hex");
+}
+function recordRow(id: string) {
+  const row = db.prepare("SELECT * FROM work_records WHERE id=?").get(id) as
+    WorkRecordRow | undefined;
+  if (!row)
+    throw new AppError(404, "NOT_FOUND", "这条实践记录不存在或已被删除");
+  return row;
+}
+function readWorkRecord(row: WorkRecordRow): WorkRecord {
+  const record = workRecordSchema.parse(JSON.parse(row.data));
+  record.stale = false;
+  if (record.projectId && record.projectFingerprint) {
+    const project = getProject(record.projectId);
+    const fingerprint = projectFingerprint(project);
+    // Older reviews were hashed before continuity cards existed. Accept that
+    // hash only while every shot still has no continuity card.
+    const matchesLegacy =
+      project.shots.every((shot) => shot.continuity === undefined) &&
+      record.projectFingerprint === legacyProjectFingerprint(project);
+    record.stale = record.projectFingerprint !== fingerprint && !matchesLegacy;
+  }
+  return record;
+}
+export function listWorkRecords(): WorkRecord[] {
+  return workRecordRows().map(readWorkRecord);
+}
+export function getWorkRecord(id: string): WorkRecord {
+  return readWorkRecord(recordRow(id));
+}
+function projectSnapshot(projectId: string | null) {
+  if (!projectId) return { projectRevision: null, projectFingerprint: null };
+  const project = getProject(projectId);
+  return {
+    projectRevision: project.revision,
+    projectFingerprint: projectFingerprint(project),
+  };
+}
+function writeWorkRecord(record: WorkRecord) {
+  db.prepare("UPDATE work_records SET data=? WHERE id=?").run(
+    JSON.stringify(record),
+    record.id,
+  );
+}
+function writeWorkRecordVersion(record: WorkRecord) {
+  db.prepare(
+    "INSERT INTO work_record_versions(record_id,revision,data) VALUES(?,?,?) ON CONFLICT(record_id,revision) DO NOTHING",
+  ).run(record.id, record.revision, JSON.stringify(record));
+}
+export function workRecordHistory(id: string): WorkRecord[] {
+  const current = workRecordSchema.parse(JSON.parse(recordRow(id).data));
+  const rows = db
+    .prepare(
+      "SELECT data FROM work_record_versions WHERE record_id=? ORDER BY revision DESC",
+    )
+    .all(id) as { data: string }[];
+  return rows.length
+    ? rows.map((row) => workRecordSchema.parse(JSON.parse(row.data)))
+    : [current];
+}
+export function createWorkRecord(
+  id: string,
+  rawInput: WorkRecordInput,
+): { record: WorkRecord; created: boolean } {
+  const input = workRecordInputSchema.parse(rawInput);
+  const normalized = canonicalJson(input);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const existing = db
+      .prepare("SELECT * FROM work_records WHERE id=?")
+      .get(id) as WorkRecordRow | undefined;
+    if (existing) {
+      const originalInput = workRecordInputSchema.parse(
+        JSON.parse(existing.create_input),
+      );
+      if (canonicalJson(originalInput) !== normalized) {
+        throw new AppError(
+          409,
+          "KEY_REUSED",
+          "记录标识已用于另一条内容，请重新创建记录",
+        );
+      }
+      const record = readWorkRecord(existing);
+      db.exec("COMMIT");
+      return { record, created: false };
+    }
+    const now = new Date().toISOString();
+    const record: WorkRecord = {
+      ...input,
+      id,
+      revision: 0,
+      createdAt: now,
+      updatedAt: now,
+      ...projectSnapshot(input.projectId),
+      stale: false,
+    };
+    db.prepare(
+      "INSERT INTO work_records(id,data,create_input) VALUES(?,?,?)",
+    ).run(id, JSON.stringify(record), normalized);
+    writeWorkRecordVersion(record);
+    db.exec("COMMIT");
+    return { record, created: true };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+export function changeWorkRecord(
+  id: string,
+  rawInput: WorkRecordInput,
+  expectedRevision: number,
+  reconfirmProjectRevision?: number,
+): WorkRecord {
+  const input = workRecordInputSchema.parse(rawInput);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const current = getWorkRecord(id);
+    if (current.revision !== expectedRevision) {
+      throw new AppError(
+        409,
+        "REVISION_CONFLICT",
+        "记录已在其他页面更新，请重新加载后编辑",
+      );
+    }
+    writeWorkRecordVersion(
+      workRecordSchema.parse(JSON.parse(recordRow(id).data)),
+    );
+    if (reconfirmProjectRevision !== undefined) {
+      if (!input.projectId) {
+        throw new AppError(
+          400,
+          "INVALID_RECONFIRM",
+          "请先关联项目，再确认复核的项目版本",
+        );
+      }
+      const project = getProject(input.projectId);
+      if (project.revision !== reconfirmProjectRevision) {
+        throw new AppError(
+          409,
+          "PROJECT_REVISION_CONFLICT",
+          "项目已再次改变，请重新查看并复核当前版本",
+        );
+      }
+    }
+    const snapshot =
+      input.projectId !== current.projectId ||
+      reconfirmProjectRevision !== undefined
+        ? projectSnapshot(input.projectId)
+        : {
+            projectRevision: current.projectRevision,
+            projectFingerprint: current.projectFingerprint,
+          };
+    const record: WorkRecord = {
+      ...current,
+      ...input,
+      revision: current.revision + 1,
+      updatedAt: new Date().toISOString(),
+      ...snapshot,
+    };
+    writeWorkRecord(record);
+    const saved = getWorkRecord(id);
+    writeWorkRecord(saved);
+    writeWorkRecordVersion(saved);
+    db.exec("COMMIT");
+    return saved;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+export function deleteWorkRecord(id: string, expectedRevision?: number) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const current = workRecordSchema.parse(JSON.parse(recordRow(id).data));
+    if (
+      expectedRevision !== undefined &&
+      current.revision !== expectedRevision
+    ) {
+      throw new AppError(
+        409,
+        "REVISION_CONFLICT",
+        "记录已更新，不能删除旧版本，请重新加载后确认",
+      );
+    }
+    db.prepare("DELETE FROM work_record_versions WHERE record_id=?").run(id);
+    db.prepare("DELETE FROM work_records WHERE id=?").run(id);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }

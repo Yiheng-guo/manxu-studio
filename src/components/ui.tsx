@@ -14,6 +14,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Film,
+  FlaskConical,
+  ScanSearch,
+  ShieldCheck,
+  Library,
+  MessagesSquare,
 } from "lucide-react";
 import { useState, Suspense } from "react";
 export function Brand() {
@@ -34,26 +39,32 @@ export function Brand() {
 function SidebarNav() {
   const path = usePathname();
   const query = useSearchParams();
-  const view = query.get("view") || "studio";
+  const view = query.get("view") || "overview";
   return (
     <nav aria-label="主导航">
       {[
-        { id: "studio", name: "创作工作台", icon: LayoutDashboard },
-        { id: "assets", name: "灵感素材库", icon: Images },
-        { id: "guide", name: "创作指南", icon: BookOpen },
+        { id: "overview", name: "实践总览", icon: LayoutDashboard },
+        { id: "research", name: "研究与需求", icon: ScanSearch },
+        { id: "evaluation", name: "模型评测", icon: FlaskConical },
+        { id: "studio", name: "漫剧创作", icon: Clapperboard },
+        { id: "quality", name: "质量与复测", icon: ShieldCheck },
+        { id: "sharing", name: "知识分享", icon: MessagesSquare },
+        { id: "methods", name: "方法与 Skill", icon: Library },
       ].map((item) => (
         <Link
-          className={`nav-item ${view === item.id && path === "/" ? "active" : ""}`}
-          href={item.id === "studio" ? "/" : `/?view=${item.id}`}
+          className={`nav-item ${(view === item.id && path === "/") || (item.id === "studio" && path.startsWith("/project/")) ? "active" : ""}`}
+          href={item.id === "overview" ? "/" : `/?view=${item.id}`}
           key={item.id}
         >
           <item.icon size={19} />
           {item.name}
-          {item.id === "studio" && <span className="nav-dot" />}
+          {item.id === "overview" && <span className="nav-dot" />}
         </Link>
       ))}
       <div className="nav-divider" />
-      <span className="nav-label">工作空间</span>
+      <span className="nav-label">工具与资源</span>
+      <Link className={`nav-item ${view === "assets" ? "active" : ""}`} href="/?view=assets"><Images size={19} />素材库</Link>
+      <Link className={`nav-item ${view === "guide" ? "active" : ""}`} href="/?view=guide"><BookOpen size={19} />使用指南</Link>
       <Link
         className={`nav-item ${view === "settings" ? "active" : ""}`}
         href="/?view=settings"
@@ -86,7 +97,7 @@ export function Shell({
           onClick={() => setOpen(false)}
         />
       )}
-      <aside className={`sidebar ${open ? "is-open" : ""}`}>
+      <aside className={`sidebar ${open ? "is-open" : ""}`} onClick={(e)=>{if((e.target as HTMLElement).closest("a"))setOpen(false);}}>
         <div className="sidebar-top">
           <Brand />
           <button
@@ -100,12 +111,12 @@ export function Shell({
         <div className="workspace-switch">
           <span className="workspace-avatar">Y</span>
           <div>
-            <b>我的创作空间</b>
-            <small>个人工作室</small>
+            <b>我的实践空间</b>
+            <small>AIGC 产品与创作</small>
           </div>
           <ChevronRight size={14} />
         </div>
-        <span className="nav-label">开始创作</span>
+        <span className="nav-label">工作台</span>
         <Suspense>
           <SidebarNav />
         </Suspense>
@@ -113,19 +124,19 @@ export function Shell({
           <div className="sidebar-note">
             <Film size={22} />
             <p>
-              每个故事，
+              从问题出发，
               <br />
-              都值得被看见。
+              让每次实践有据可循。
             </p>
-            <Link href="/?view=guide">
-              从第一镜开始 <ArrowUpRight size={15} />
+            <Link href="/?view=methods">
+              六项方法资产 <ArrowUpRight size={15} />
             </Link>
           </div>
           <div className="profile">
             <div className="avatar">Y</div>
             <div>
               <b>Yiheng 的工作室</b>
-              <small>本地创作 · 自由表达</small>
+              <small>个人沉淀 · 本机保存</small>
             </div>
             <span className="online-dot" />
           </div>
@@ -157,7 +168,7 @@ export function Shell({
         <main id="main">{children}</main>
         <footer className="app-footer">
           <span>漫序 FRAMEFLOW</span>
-          <span>故事由你定义，灵感在此成帧。</span>
+          <span>研究有证据，创作有检查，迭代有记录。</span>
         </footer>
       </div>
     </div>
@@ -186,7 +197,7 @@ export function Modal({
     <dialog
       ref={ref}
       className={`modal ${wide ? "modal-wide" : ""}`}
-      onCancel={onClose}
+      onCancel={(e)=>{e.preventDefault();onClose();}}
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}

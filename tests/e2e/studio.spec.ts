@@ -3,7 +3,7 @@ let projectId = "";
 test("create, edit, save, refresh, preview, and export a project backup", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/?view=studio");
   await expect(
     page.getByRole("heading", { name: "把脑海里的故事，变成漫剧。" }),
   ).toBeVisible();

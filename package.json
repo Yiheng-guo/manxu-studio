@@ -2,7 +2,7 @@
   "name": "manxu-studio",
   "version": "1.0.0",
   "private": true,
-  "description": "漫序 · FrameFlow — 从一个故事，到一部漫剧",
+  "description": "漫序 · FrameFlow — 个人 AIGC 产品实践工作台，连接研究、评测、创作与质量复测",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
